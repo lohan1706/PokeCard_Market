@@ -38,8 +38,19 @@ cp .env.example .env
 docker compose up -d postgres
 pnpm install
 pnpm db:migrate
+pnpm db:seed
 pnpm dev
 ```
+
+## Données de démonstration
+
+`pnpm db:seed` est idempotent. Il insère un catalogue fictif, sans appel réseau : 2 extensions, 9 cartes, leurs variantes, le prix courant et 45 jours d'historique. La source est `SEED`, distincte d'un futur import réel.
+
+| Compte                              | Mot de passe         | Rôle  |
+| ----------------------------------- | -------------------- | ----- |
+| `camille.admin@demo.pokecard.local` | `DemoAdmin!2026`     | ADMIN |
+| `lea.martin@demo.pokecard.local`    | `DemoCollector!2026` | USER  |
+| `noah.bernard@demo.pokecard.local`  | `DemoCollector!2026` | USER  |
 
 ## Vérifications
 
