@@ -1,0 +1,365 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AlertDirection {
+  ABOVE
+  BELOW
+}
+
+enum NotificationType {
+  PRICE_ALERT
+  ACCOUNT
+  SYSTEM
+}
+
+enum IngestionStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model Role {
+  id    String @id @default(uuid()) @db.Uuid
+  code  String @unique @db.VarChar(32)
+  label String @db.VarChar(80)
+
+  users User[]
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  roleId       String    @db.Uuid
+  email        String    @unique @db.Citext
+  passwordHash String    @db.VarChar(255)
+  displayName  String    @db.VarChar(80)
+  disabledAt   DateTime? @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(6)
+
+  role                 Role                 @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  collection           Collection?
+  watchlistItems       WatchlistItem[]
+  priceAlerts          PriceAlert[]
+  notifications        Notification[]
+  sessions             Session[]
+  passwordResetTokens  PasswordResetToken[]
+  auditLogs            AuditLog[]
+
+  @@index([roleId])
+}
+
+model Set {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique @db.VarChar(32)
+  name        String    @db.VarChar(200)
+  series      String?   @db.VarChar(120)
+  language    String    @db.VarChar(8)
+  releaseDate DateTime? @db.Date
+  logoUrl     String?
+  symbolUrl   String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+
+  cards Card[]
+}
+
+model Card {
+  id            String   @id @default(uuid()) @db.Uuid
+  setId         String   @db.Uuid
+  number        String   @db.VarChar(16)
+  name          String   @db.VarChar(200)
+  rarity        String?  @db.VarChar(80)
+  supertype     String?  @db.VarChar(40)
+  subtypes      String[]
+  hp            Int?
+  imageUrl      String?
+  imageLargeUrl String?
+  externalId    String   @unique @db.VarChar(64)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
+
+  set      Set           @relation(fields: [setId], references: [id], onDelete: Restrict)
+  variants CardVariant[]
+
+  @@unique([setId, number])
+  @@index([setId])
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "Card_name_trgm_idx", type: Gin)
+}
+
+model Variant {
+  id                  String  @id @default(uuid()) @db.Uuid
+  code                String  @unique @db.VarChar(32)
+  name                String  @db.VarChar(80)
+  sortOrder           Int
+  fallbackCoefficient Decimal @db.Decimal(6, 4)
+
+  cardVariants CardVariant[]
+}
+
+model CardVariant {
+  id        String   @id @default(uuid()) @db.Uuid
+  cardId    String   @db.Uuid
+  variantId String   @db.Uuid
+  imageUrl  String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  card             Card              @relation(fields: [cardId], references: [id], onDelete: Restrict)
+  variant          Variant           @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  prices           Price[]
+  priceHistory     PriceHistory[]
+  collectionItems  CollectionItem[]
+  watchlistItems   WatchlistItem[]
+  priceAlerts      PriceAlert[]
+
+  @@unique([cardId, variantId])
+  @@index([cardId])
+  @@index([variantId])
+}
+
+model PriceProvider {
+  id              String   @id @default(uuid()) @db.Uuid
+  code            String   @unique @db.VarChar(32)
+  name            String   @db.VarChar(120)
+  baseUrl         String?
+  defaultCurrency String   @db.Char(3)
+  isActive        Boolean
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
+
+  prices         Price[]
+  priceHistory   PriceHistory[]
+  ingestionRuns  IngestionRun[]
+}
+
+model Price {
+  id            String   @id @default(uuid()) @db.Uuid
+  cardVariantId String   @db.Uuid
+  providerId    String   @db.Uuid
+  currency      String   @db.Char(3)
+  market        Decimal  @db.Decimal(12, 2)
+  low           Decimal? @db.Decimal(12, 2)
+  mid           Decimal? @db.Decimal(12, 2)
+  high          Decimal? @db.Decimal(12, 2)
+  capturedOn    DateTime @db.Date
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
+
+  cardVariant CardVariant   @relation(fields: [cardVariantId], references: [id], onDelete: Restrict)
+  provider    PriceProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@unique([cardVariantId, providerId, currency])
+  @@index([providerId, capturedOn])
+}
+
+model PriceHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  cardVariantId String   @db.Uuid
+  providerId    String   @db.Uuid
+  currency      String   @db.Char(3)
+  market        Decimal  @db.Decimal(12, 2)
+  low           Decimal? @db.Decimal(12, 2)
+  mid           Decimal? @db.Decimal(12, 2)
+  high          Decimal? @db.Decimal(12, 2)
+  capturedOn    DateTime @db.Date
+  isCorrected   Boolean  @default(false)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
+
+  cardVariant CardVariant   @relation(fields: [cardVariantId], references: [id], onDelete: Restrict)
+  provider    PriceProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@unique([cardVariantId, providerId, currency, capturedOn])
+  @@index([cardVariantId, currency, capturedOn(sort: Desc)])
+  @@index([providerId, capturedOn])
+}
+
+model Condition {
+  id          String  @id @default(uuid()) @db.Uuid
+  code        String  @unique @db.VarChar(32)
+  label       String  @db.VarChar(80)
+  coefficient Decimal @db.Decimal(6, 4)
+
+  collectionItems CollectionItem[]
+}
+
+model Collection {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  name      String   @db.VarChar(80)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       CollectionItem[]
+  valuations  CollectionValuation[]
+}
+
+model CollectionItem {
+  id               String    @id @default(uuid()) @db.Uuid
+  collectionId     String    @db.Uuid
+  cardVariantId    String    @db.Uuid
+  conditionId      String    @db.Uuid
+  quantity         Int
+  acquiredPrice    Decimal?  @db.Decimal(12, 2)
+  acquiredCurrency String?   @db.Char(3)
+  acquiredAt       DateTime? @db.Date
+  notes            String?   @db.VarChar(500)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(6)
+
+  collection  Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  cardVariant CardVariant @relation(fields: [cardVariantId], references: [id], onDelete: Restrict)
+  condition   Condition   @relation(fields: [conditionId], references: [id], onDelete: Restrict)
+
+  @@unique([collectionId, cardVariantId, conditionId])
+  @@index([collectionId])
+  @@index([cardVariantId])
+}
+
+model WatchlistItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  cardVariantId String   @db.Uuid
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardVariant CardVariant @relation(fields: [cardVariantId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, cardVariantId])
+  @@index([userId])
+}
+
+model PriceAlert {
+  id              String         @id @default(uuid()) @db.Uuid
+  userId          String         @db.Uuid
+  cardVariantId   String         @db.Uuid
+  direction       AlertDirection
+  threshold       Decimal        @db.Decimal(12, 2)
+  currency        String         @db.Char(3)
+  isActive        Boolean
+  lastTriggeredAt DateTime?      @db.Timestamptz(6)
+  createdAt       DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @db.Timestamptz(6)
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardVariant  CardVariant    @relation(fields: [cardVariantId], references: [id], onDelete: Restrict)
+  events       AlertEvent[]
+  notifications Notification[]
+
+  @@unique([userId, cardVariantId, direction, currency, threshold])
+  @@index([userId])
+  @@index([isActive, cardVariantId])
+}
+
+model AlertEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  priceAlertId String   @db.Uuid
+  market       Decimal  @db.Decimal(12, 2)
+  currency     String   @db.Char(3)
+  triggeredAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  priceAlert   PriceAlert    @relation(fields: [priceAlertId], references: [id], onDelete: Cascade)
+  notification Notification?
+
+  @@index([priceAlertId, triggeredAt(sort: Desc)])
+}
+
+model Notification {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @db.Uuid
+  priceAlertId String?          @db.Uuid
+  alertEventId String?          @unique @db.Uuid
+  type         NotificationType
+  title        String           @db.VarChar(160)
+  body         String           @db.VarChar(500)
+  readAt       DateTime?        @db.Timestamptz(6)
+  createdAt    DateTime         @default(now()) @db.Timestamptz(6)
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  priceAlert PriceAlert? @relation(fields: [priceAlertId], references: [id], onDelete: SetNull)
+  alertEvent AlertEvent? @relation(fields: [alertEventId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, readAt])
+}
+
+model CollectionValuation {
+  collectionId String   @db.Uuid
+  valuedOn     DateTime @db.Date
+  marketValue  Decimal  @db.Decimal(14, 2)
+  costBasis    Decimal  @db.Decimal(14, 2)
+  currency     String   @db.Char(3)
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, valuedOn])
+}
+
+model Session {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique @db.VarChar(255)
+  expiresAt DateTime  @db.Timestamptz(6)
+  revokedAt DateTime? @db.Timestamptz(6)
+  userAgent String?   @db.VarChar(255)
+  ip        String?   @db.VarChar(64)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique @db.VarChar(255)
+  expiresAt DateTime  @db.Timestamptz(6)
+  usedAt    DateTime? @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model IngestionRun {
+  id            String          @id @default(uuid()) @db.Uuid
+  providerId    String          @db.Uuid
+  status        IngestionStatus
+  startedAt     DateTime        @default(now()) @db.Timestamptz(6)
+  finishedAt    DateTime?       @db.Timestamptz(6)
+  cardsSeen     Int             @default(0)
+  pricesWritten Int             @default(0)
+  error         String?
+
+  provider PriceProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@index([providerId, startedAt(sort: Desc)])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  action     String   @db.VarChar(80)
+  entityType String   @db.VarChar(80)
+  entityId   String   @db.VarChar(64)
+  metadata   Json     @db.JsonB
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt(sort: Desc)])
+}
