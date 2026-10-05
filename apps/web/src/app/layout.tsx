@@ -4,7 +4,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'PokéCard Market',
-  description: 'Socle technique de PokéCard Market.',
+  description: 'Suivi de collection et de prix pour les cartes Pokémon.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
