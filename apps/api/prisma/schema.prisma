@@ -70,6 +70,8 @@ model Set {
   updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
 
   cards Card[]
+
+  @@index([language], map: "Set_language_idx")
 }
 
 model Card {
@@ -92,6 +94,7 @@ model Card {
 
   @@unique([setId, number])
   @@index([setId])
+  @@index([rarity], map: "Card_rarity_idx")
   @@index([name(ops: raw("gin_trgm_ops"))], map: "Card_name_trgm_idx", type: Gin)
 }
 

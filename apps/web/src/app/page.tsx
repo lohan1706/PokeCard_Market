@@ -23,6 +23,12 @@ export default function HomePage() {
         >
           Inscription
         </Link>
+        <Link
+          href="/cards"
+          className="rounded-md border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-100"
+        >
+          Catalogue
+        </Link>
       </div>
       <p className="mt-6 text-sm text-slate-500">
         Santé de l’API : <code className="text-slate-800">{buildApiUrl('/health')}</code>
