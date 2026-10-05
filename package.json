@@ -1,0 +1,35 @@
+{
+  "name": "pokecard-market",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --if-present dev",
+    "lint": "pnpm -r --if-present lint && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:integration": "pnpm --filter @pokecard/api test:integration",
+    "test:e2e": "pnpm exec playwright test",
+    "db:generate": "pnpm --filter @pokecard/api prisma:generate",
+    "db:validate": "pnpm --filter @pokecard/api prisma:validate",
+    "db:migrate": "pnpm --filter @pokecard/api prisma:migrate"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "prettier": "^3.6.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/engines",
+      "@scarf/scarf",
+      "esbuild",
+      "prisma",
+      "unrs-resolver"
+    ]
+  }
+}
