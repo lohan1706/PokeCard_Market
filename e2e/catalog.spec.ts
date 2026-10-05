@@ -4,11 +4,12 @@ test.describe('catalog', () => {
   test('searches, filters, paginates and opens a card', async ({ page }) => {
     await page.goto('/cards');
     await expect(page.getByRole('heading', { name: 'Cartes' })).toBeVisible();
-    await expect(page.getByText('9 cartes')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Lumisprite' })).toBeVisible();
+    await expect(page.getByText(/\d+ cartes/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Brasillon' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cendragon' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Suivant' }).click();
-    await expect(page.getByText('Page 2 sur 2')).toBeVisible();
+    await expect(page.getByText(/Page 2 sur \d+/)).toBeVisible();
 
     await page.getByRole('textbox', { name: 'Nom' }).fill('Cendragon');
     await page.getByRole('button', { name: 'Rechercher' }).click();

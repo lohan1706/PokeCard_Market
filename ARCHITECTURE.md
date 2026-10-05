@@ -16,7 +16,7 @@ Le frontend appelle l’API en same-origin. `API_INTERNAL_URL` désigne NestJS d
 
 Le démarrage valide `DATABASE_URL`, `API_PORT` et `WEB_ORIGIN`. Prisma est branché avec l’adaptateur PostgreSQL. `GET /api/v1/health` exécute `SELECT 1` et répond `503` si la base est injoignable.
 
-`auth` ouvre une session opaque. `dashboard` et `admin` appliquent les rôles `USER` et `ADMIN`. `catalog` expose la recherche publique des cartes. Les modules encore absents : `users`, `prices`, `collection`, `watchlist`, `alerts`.
+`auth` ouvre une session opaque. `dashboard` et `admin` appliquent les rôles `USER` et `ADMIN`. `catalog` expose la recherche publique des cartes. `ingestion` prépare la synchronisation bornée, réservée aux administrateurs. Les modules encore absents : `users`, `collection`, `watchlist`, `alerts`.
 
 ## Données
 
@@ -55,6 +55,10 @@ L’inscription crée un compte `USER` et une collection vide. La connexion vér
 
 Le frontend parle à l’API en same-origin. `proxy.ts` redirige vers `/login` lorsqu’il manque le cookie. Les pages relisent ensuite la session auprès de NestJS.
 
+## Ingestion
+
+Le détail est dans `DATA_INGESTION.md` et `DATA_SOURCES.md`. Le worker reste inactif. `TCGDEX_SYNC_ENABLED` vaut `false` tant qu’un import réel n’est pas validé. Le catalogue `SEED` n’est pas modifié par le fournisseur `DEMO`.
+
 ## Hors périmètre
 
-Import Pokémon TCG, collection, watchlist, alertes et administration complète restent à développer.
+Collection, watchlist, alertes, import massif et synchronisation planifiée restent à développer.

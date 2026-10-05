@@ -6,6 +6,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { parseEnv } from './config/env.schema';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
+import { IngestionModule } from './ingestion/ingestion.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { PrismaModule } from './prisma/prisma.module';
     CatalogModule,
     DashboardModule,
     AdminModule,
+    IngestionModule,
   ],
 })
 export class AppModule {}

@@ -80,18 +80,28 @@ export function CardDetail({ id }: { id: string }) {
             <p className="mt-6 text-sm font-medium tracking-wide text-slate-500 uppercase">
               Variantes
             </p>
-            <ul className="mt-3 divide-y divide-slate-200 rounded-xl border border-slate-200">
-              {snapshot.card.variants.map((variant) => (
-                <li key={variant.code} className="flex items-center justify-between px-4 py-3">
-                  <span>{variant.name}</span>
-                  <span className="font-medium">
-                    {variant.market && variant.currency
-                      ? formatMarket({ amount: variant.market, currency: variant.currency })
-                      : 'Prix indisponible'}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {snapshot.card.variants.length === 0 ? (
+              <p className="mt-3 text-slate-600">Variante indisponible</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-slate-200 rounded-xl border border-slate-200">
+                {snapshot.card.variants.map((variant) => (
+                  <li key={variant.code} className="flex items-center justify-between px-4 py-3">
+                    <span>{variant.name}</span>
+                    <span className="text-right font-medium">
+                      {variant.market && variant.currency
+                        ? formatMarket({ amount: variant.market, currency: variant.currency })
+                        : 'Prix indisponible'}
+                      {variant.capturedOn ? (
+                        <span className="mt-1 block text-xs font-normal text-slate-500">
+                          Relevé du {variant.capturedOn}
+                          {variant.source ? ` · ${variant.source}` : ''}
+                        </span>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
       ) : null}

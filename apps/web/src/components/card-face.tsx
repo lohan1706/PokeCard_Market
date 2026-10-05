@@ -12,14 +12,25 @@ const RARITY_STYLES: Record<string, string> = {
 
 export function CardFace({ card, linked = true }: { card: CatalogCard; linked?: boolean }) {
   const gradient = RARITY_STYLES[card.rarity ?? ''] ?? 'from-slate-200 to-sky-400';
+  const image = card.imageUrl?.startsWith('https://') ? card.imageUrl : null;
   const body = (
     <>
-      <div className={`relative h-36 bg-gradient-to-br ${gradient}`}>
+      <div className={`relative h-44 bg-gradient-to-br ${gradient}`}>
+        {image ? (
+          // Hotlink only: the artwork stays hosted by TCGdex.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={`Illustration de ${card.name}, hébergée par TCGdex`}
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          <span className="absolute right-3 bottom-3 text-3xl font-semibold tracking-tight text-white/90">
+            {card.hp ?? '—'}
+          </span>
+        )}
         <span className="absolute top-3 left-3 rounded-full bg-white/80 px-2 py-1 text-xs font-semibold text-slate-800">
           {card.number}
-        </span>
-        <span className="absolute right-3 bottom-3 text-3xl font-semibold tracking-tight text-white/90">
-          {card.hp ?? '—'}
         </span>
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">

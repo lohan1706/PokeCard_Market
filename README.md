@@ -29,7 +29,7 @@ docker compose up --build
 - OpenAPI : http://localhost:3001/api/docs
 - PostgreSQL : `localhost:5432`
 
-Le conteneur API applique les migrations Prisma au démarrage. Le worker partage la même image et reste inactif : l’import des prix n’est pas implémenté.
+Le conteneur API applique les migrations Prisma au démarrage. Le worker partage la même image et reste inactif. La synchronisation manuelle est décrite dans `DATA_INGESTION.md`.
 
 ## Démarrage local
 

@@ -8,6 +8,7 @@ describe('parseEnv', () => {
 
     expect(env.API_PORT).toBe(3001);
     expect(env.WEB_ORIGIN).toBe('http://localhost:3000');
+    expect(env.TCGDEX_SYNC_ENABLED).toBe(false);
   });
 
   it('rejects a missing database URL', () => {

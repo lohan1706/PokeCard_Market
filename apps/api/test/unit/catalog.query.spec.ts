@@ -47,6 +47,7 @@ describe('presentCard', () => {
       supertype: 'Pokémon',
       subtypes: ['Basic'],
       hp: 80,
+      imageUrl: null,
       set: {
         code: 'LUM1',
         name: 'Lumen Démo',
@@ -65,6 +66,7 @@ describe('presentCard', () => {
               high: { toString: () => '1.90' },
               currency: 'USD',
               capturedOn: new Date('2026-10-05T00:00:00.000Z'),
+              provider: { code: 'SEED', name: 'Jeu de démonstration' },
             },
           ],
         },
@@ -78,6 +80,7 @@ describe('presentCard', () => {
               high: null,
               currency: 'USD',
               capturedOn: new Date('2026-10-05T00:00:00.000Z'),
+              provider: { code: 'SEED', name: 'Jeu de démonstration' },
             },
           ],
         },
@@ -85,7 +88,80 @@ describe('presentCard', () => {
     });
 
     expect(card.market).toEqual({ amount: '1.15', currency: 'USD' });
+    expect(card.imageUrl).toBeNull();
     expect(card.set.releaseDate).toBe('2024-02-02');
     expect(card.variants.map((variant) => variant.market)).toEqual(['1.70', '1.15']);
+    expect(card.variants[0]?.source).toBe('Jeu de démonstration');
+  });
+
+  it('keeps a USD price ahead of an earlier EUR row and falls back when USD is absent', () => {
+    const shared = {
+      id: 'card-2',
+      name: 'Élektek',
+      number: '20',
+      rarity: 'Rare',
+      supertype: 'Pokémon',
+      subtypes: [],
+      hp: 70,
+      imageUrl: 'https://assets.tcgdex.net/fr/base/base1/20/high.webp',
+      set: {
+        code: 'base1',
+        name: 'Set de Base',
+        language: 'fr',
+        series: 'Base',
+        releaseDate: new Date('1999-01-09T00:00:00.000Z'),
+      },
+    };
+    const withUsd = presentCard({
+      ...shared,
+      variants: [
+        {
+          variant: { code: 'NORMAL', name: 'Normale' },
+          prices: [
+            {
+              market: { toString: () => '9.91' },
+              low: null,
+              mid: null,
+              high: null,
+              currency: 'EUR',
+              capturedOn: new Date('2026-10-04T00:00:00.000Z'),
+              provider: { code: 'TCGDEX', name: 'TCGdex' },
+            },
+            {
+              market: { toString: () => '9.71' },
+              low: null,
+              mid: null,
+              high: null,
+              currency: 'USD',
+              capturedOn: new Date('2026-10-04T00:00:00.000Z'),
+              provider: { code: 'TCGDEX', name: 'TCGdex' },
+            },
+          ],
+        },
+      ],
+    });
+    expect(withUsd.market).toEqual({ amount: '9.71', currency: 'USD' });
+    expect(withUsd.imageUrl).toBe('https://assets.tcgdex.net/fr/base/base1/20/high.webp');
+
+    const eurOnly = presentCard({
+      ...shared,
+      variants: [
+        {
+          variant: { code: 'NORMAL', name: 'Normale' },
+          prices: [
+            {
+              market: { toString: () => '4.20' },
+              low: null,
+              mid: null,
+              high: null,
+              currency: 'EUR',
+              capturedOn: new Date('2026-10-04T00:00:00.000Z'),
+              provider: { code: 'TCGDEX', name: 'TCGdex' },
+            },
+          ],
+        },
+      ],
+    });
+    expect(eurOnly.market).toEqual({ amount: '4.20', currency: 'EUR' });
   });
 });

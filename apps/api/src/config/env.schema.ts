@@ -9,6 +9,10 @@ export const envSchema = z.object({
     }),
   API_PORT: z.coerce.number().int().positive().default(3001),
   WEB_ORIGIN: z.string().min(1).default('http://localhost:3000'),
+  TCGDEX_SYNC_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;

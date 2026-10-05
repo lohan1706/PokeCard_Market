@@ -14,8 +14,9 @@ export default async function CardsPage({
       <p className="text-sm font-medium tracking-wide text-sky-700 uppercase">Catalogue</p>
       <h1 className="mt-3 text-4xl font-semibold tracking-tight">Cartes</h1>
       <p className="mt-3 max-w-2xl text-slate-600">
-        Parcourez les cartes de démonstration. Les prix affichés sont en USD et proviennent du jeu
-        de données fictif.
+        Le jeu de démonstration reste visible à côté des cartes importées. Un prix ou une image
+        n’apparaît que s’il a été enregistré. Les images distantes restent hébergées par leur
+        source.
       </p>
       <CatalogBrowser query={query} />
     </main>
