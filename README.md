@@ -1,6 +1,6 @@
 # PokéCard Market
 
-Socle technique du projet. Les fonctionnalités métier (catalogue, collection, alertes, administration) ne sont pas encore développées.
+Socle technique du projet, avec l’authentification par session. Le catalogue, la collection et les alertes ne sont pas encore développés.
 
 ## Stack
 
@@ -38,8 +38,34 @@ cp .env.example .env
 docker compose up -d postgres
 pnpm install
 pnpm db:migrate
+pnpm db:seed
 pnpm dev
 ```
+
+## Authentification
+
+Les mots de passe nouveaux sont hachés en Argon2id. Les comptes de démonstration, hachés en scrypt, restent valides et sont convertis à la première connexion. La session est un cookie `HttpOnly` nommé `pcm_session`. Seul son empreinte SHA-256 est stockée. Les routes protégées exigent ce cookie. `GET /api/v1/admin/summary` est réservé au rôle `ADMIN`.
+
+| Méthode | Route                   |
+| ------- | ----------------------- |
+| `POST`  | `/api/v1/auth/register` |
+| `POST`  | `/api/v1/auth/login`    |
+| `POST`  | `/api/v1/auth/logout`   |
+| `GET`   | `/api/v1/auth/me`       |
+| `GET`   | `/api/v1/dashboard`     |
+| `GET`   | `/api/v1/admin/summary` |
+
+Pages : `/register`, `/login`, `/dashboard`, `/admin`.
+
+## Données de démonstration
+
+`pnpm db:seed` est idempotent. Il insère un catalogue fictif, sans appel réseau : 2 extensions, 9 cartes, leurs variantes, le prix courant et 45 jours d'historique. La source est `SEED`, distincte d'un futur import réel.
+
+| Compte                              | Mot de passe         | Rôle  |
+| ----------------------------------- | -------------------- | ----- |
+| `camille.admin@demo.pokecard.local` | `DemoAdmin!2026`     | ADMIN |
+| `lea.martin@demo.pokecard.local`    | `DemoCollector!2026` | USER  |
+| `noah.bernard@demo.pokecard.local`  | `DemoCollector!2026` | USER  |
 
 ## Vérifications
 
@@ -52,6 +78,6 @@ pnpm test:e2e
 pnpm db:validate
 ```
 
-Les tests d’intégration appellent `GET /api/v1/health` contre PostgreSQL. Playwright ouvre la page d’accueil.
+Les tests d’intégration appellent la santé de l’API et le parcours d’authentification contre PostgreSQL. Playwright couvre la page d’accueil, l’inscription, la connexion, le tableau de bord et la déconnexion.
 
 Les variables sont documentées dans `.env.example`. Ne commitez pas `.env`. `ADMIN_EMAIL`, `ADMIN_PASSWORD` et `POKEMON_TCG_API_KEY` sont réservées aux prochaines étapes.

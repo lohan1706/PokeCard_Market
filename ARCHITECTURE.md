@@ -1,6 +1,6 @@
 # Architecture
 
-PokéCard Market est un monorepo. Cette étape livre l’infrastructure, le schéma de données validé et un point de santé. Aucun module métier n’est implémenté.
+PokéCard Market est un monorepo. Le socle livre l’infrastructure, le schéma de données validé, un point de santé et l’authentification par session.
 
 ## Applications
 
@@ -16,7 +16,7 @@ Le frontend appelle l’API en same-origin. `API_INTERNAL_URL` désigne NestJS d
 
 Le démarrage valide `DATABASE_URL`, `API_PORT` et `WEB_ORIGIN`. Prisma est branché avec l’adaptateur PostgreSQL. `GET /api/v1/health` exécute `SELECT 1` et répond `503` si la base est injoignable.
 
-Les modules prévus ensuite, sans être créés ici : `auth`, `users`, `catalog`, `prices`, `collection`, `watchlist`, `alerts`, `dashboard`, `admin`.
+`auth` ouvre une session opaque. `dashboard` et `admin` appliquent les rôles `USER` et `ADMIN`. Les modules encore absents : `users`, `catalog`, `prices`, `collection`, `watchlist`, `alerts`.
 
 ## Données
 
@@ -43,12 +43,18 @@ Les montants sont des `numeric`. Les instants sont des `timestamptz`. Le jour de
 
 ## Tests
 
-| Commande                | Périmètre                                                                                      |
-| ----------------------- | ---------------------------------------------------------------------------------------------- |
-| `pnpm test`             | Jest sur la validation d’environnement et la sonde de santé ; Vitest sur la construction d’URL |
-| `pnpm test:integration` | Supertest contre NestJS et PostgreSQL                                                          |
-| `pnpm test:e2e`         | Playwright, page d’accueil                                                                     |
+| Commande                | Périmètre                                                                                    |
+| ----------------------- | -------------------------------------------------------------------------------------------- |
+| `pnpm test`             | Jest sur l’environnement, les mots de passe, les gardes et la santé ; Vitest sur le frontend |
+| `pnpm test:integration` | Supertest contre NestJS et PostgreSQL, y compris l’authentification                          |
+| `pnpm test:e2e`         | Playwright : accueil, inscription, connexion, tableau de bord, déconnexion                   |
 
-## Hors périmètre de cette étape
+## Authentification
 
-Authentification, rôles appliqués aux routes, import Pokémon TCG, collection, watchlist, alertes, dashboard et administration restent à développer sur ce socle.
+L’inscription crée un compte `USER` et une collection vide. La connexion vérifie Argon2id, ou le scrypt historique du seed, puis pose le cookie `pcm_session`. La déconnexion révoque la session. `GET /auth/me` renvoie l’utilisateur courant, sans secret. Un garde global refuse les routes non marquées publiques. Le garde de rôles limite l’administration.
+
+Le frontend parle à l’API en same-origin. `proxy.ts` redirige vers `/login` lorsqu’il manque le cookie. Les pages relisent ensuite la session auprès de NestJS.
+
+## Hors périmètre
+
+Import Pokémon TCG, collection, watchlist, alertes et administration complète restent à développer.
