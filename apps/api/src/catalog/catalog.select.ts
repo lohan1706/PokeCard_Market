@@ -8,6 +8,7 @@ export const catalogCardSelect = {
   supertype: true,
   subtypes: true,
   hp: true,
+  imageUrl: true,
   set: {
     select: {
       code: true,
@@ -22,9 +23,7 @@ export const catalogCardSelect = {
     select: {
       variant: { select: { code: true, name: true } },
       prices: {
-        where: { currency: 'USD' },
         orderBy: { capturedOn: 'desc' },
-        take: 1,
         select: {
           market: true,
           low: true,
@@ -32,6 +31,7 @@ export const catalogCardSelect = {
           high: true,
           currency: true,
           capturedOn: true,
+          provider: { select: { code: true, name: true } },
         },
       },
     },

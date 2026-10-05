@@ -12,6 +12,7 @@ export type CatalogVariant = {
   high: string | null;
   currency: string | null;
   capturedOn: string | null;
+  source: string | null;
 };
 
 export type CatalogCard = {
@@ -22,6 +23,7 @@ export type CatalogCard = {
   supertype: string | null;
   subtypes: string[];
   hp: number | null;
+  imageUrl: string | null;
   market: CatalogMoney | null;
   set: {
     code: string;

@@ -12,6 +12,7 @@ export type CatalogVariant = {
   high: string | null;
   currency: string | null;
   capturedOn: string | null;
+  source: string | null;
 };
 
 export type CatalogCard = {
@@ -22,6 +23,7 @@ export type CatalogCard = {
   supertype: string | null;
   subtypes: string[];
   hp: number | null;
+  imageUrl: string | null;
   market: Money | null;
   set: {
     code: string;
@@ -42,6 +44,7 @@ export type CatalogPriceRow = {
   high: Amount | null;
   currency: string;
   capturedOn: Date;
+  provider: { code: string; name: string };
 };
 
 export type CatalogCardRow = {
@@ -52,6 +55,7 @@ export type CatalogCardRow = {
   supertype: string | null;
   subtypes: string[];
   hp: number | null;
+  imageUrl: string | null;
   set: {
     code: string;
     name: string;
@@ -83,9 +87,15 @@ export function formatDay(value: Date | null): string | null {
   return value.toISOString().slice(0, 10);
 }
 
+function preferredPrice(prices: CatalogPriceRow[]): CatalogPriceRow | undefined {
+  const usd = prices.filter((price) => price.currency.trim() === 'USD');
+  const pool = usd.length > 0 ? usd : prices;
+  return pool[0];
+}
+
 export function presentCard(card: CatalogCardRow): CatalogCard {
   const variants = card.variants.map((printing) => {
-    const price = printing.prices[0];
+    const price = preferredPrice(printing.prices);
     return {
       code: printing.variant.code,
       name: printing.variant.name,
@@ -93,15 +103,17 @@ export function presentCard(card: CatalogCardRow): CatalogCard {
       low: formatAmount(price?.low),
       mid: formatAmount(price?.mid),
       high: formatAmount(price?.high),
-      currency: price?.currency ?? null,
+      currency: price?.currency.trim() ?? null,
       capturedOn: formatDay(price?.capturedOn ?? null),
+      source: price?.provider.name ?? null,
     };
   });
 
   const priced = variants
     .filter((variant) => variant.market !== null && variant.currency)
     .sort((left, right) => Number(left.market) - Number(right.market));
-  const lowest = priced[0];
+  const usd = priced.filter((variant) => variant.currency === 'USD');
+  const lowest = (usd.length > 0 ? usd : priced)[0];
 
   return {
     id: card.id,
@@ -111,6 +123,7 @@ export function presentCard(card: CatalogCardRow): CatalogCard {
     supertype: card.supertype,
     subtypes: card.subtypes,
     hp: card.hp,
+    imageUrl: card.imageUrl,
     market:
       lowest?.market && lowest.currency
         ? { amount: lowest.market, currency: lowest.currency }
