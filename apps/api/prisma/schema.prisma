@@ -27,6 +27,29 @@ enum IngestionStatus {
   FAILED
 }
 
+enum IngestionJobType {
+  SETS
+  CARDS
+  PRICES
+}
+
+enum ExternalEntityType {
+  SET
+  CARD
+}
+
+enum ImportRecordType {
+  SET
+  CARD
+  PRICE
+}
+
+enum ImportRecordStatus {
+  IMPORTED
+  SKIPPED
+  FAILED
+}
+
 model Role {
   id    String @id @default(uuid()) @db.Uuid
   code  String @unique @db.VarChar(32)
@@ -63,13 +86,16 @@ model Set {
   name        String    @db.VarChar(200)
   series      String?   @db.VarChar(120)
   language    String    @db.VarChar(8)
+  region      String?   @db.VarChar(16)
   releaseDate DateTime? @db.Date
   logoUrl     String?
   symbolUrl   String?
+  cardCount   Int?
   createdAt   DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
 
-  cards Card[]
+  cards        Card[]
+  translations SetTranslation[]
 
   @@index([language], map: "Set_language_idx")
 }
@@ -89,8 +115,10 @@ model Card {
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @db.Timestamptz(6)
 
-  set      Set           @relation(fields: [setId], references: [id], onDelete: Restrict)
-  variants CardVariant[]
+  set          Set               @relation(fields: [setId], references: [id], onDelete: Restrict)
+  variants     CardVariant[]
+  translations CardTranslation[]
+  printing     CardPrinting?
 
   @@unique([setId, number])
   @@index([setId])
@@ -139,9 +167,12 @@ model PriceProvider {
   createdAt       DateTime @default(now()) @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @db.Timestamptz(6)
 
-  prices         Price[]
-  priceHistory   PriceHistory[]
-  ingestionRuns  IngestionRun[]
+  prices             Price[]
+  priceHistory       PriceHistory[]
+  ingestionRuns      IngestionRun[]
+  externalIdentities ExternalIdentity[]
+  importRecords      ImportRecord[]
+  conditionMaps      ConditionMap[]
 }
 
 model Price {
@@ -149,18 +180,21 @@ model Price {
   cardVariantId String   @db.Uuid
   providerId    String   @db.Uuid
   currency      String   @db.Char(3)
+  conditionCode String   @default("UNSPECIFIED") @db.VarChar(32)
   market        Decimal  @db.Decimal(12, 2)
   low           Decimal? @db.Decimal(12, 2)
   mid           Decimal? @db.Decimal(12, 2)
   high          Decimal? @db.Decimal(12, 2)
   capturedOn    DateTime @db.Date
+  externalId    String?  @db.VarChar(128)
+  sourceUrl     String?
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @db.Timestamptz(6)
 
   cardVariant CardVariant   @relation(fields: [cardVariantId], references: [id], onDelete: Restrict)
   provider    PriceProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
 
-  @@unique([cardVariantId, providerId, currency])
+  @@unique([cardVariantId, providerId, currency, conditionCode], map: "Price_variant_provider_ccy_cond_key")
   @@index([providerId, capturedOn])
 }
 
@@ -169,11 +203,14 @@ model PriceHistory {
   cardVariantId String   @db.Uuid
   providerId    String   @db.Uuid
   currency      String   @db.Char(3)
+  conditionCode String   @default("UNSPECIFIED") @db.VarChar(32)
   market        Decimal  @db.Decimal(12, 2)
   low           Decimal? @db.Decimal(12, 2)
   mid           Decimal? @db.Decimal(12, 2)
   high          Decimal? @db.Decimal(12, 2)
   capturedOn    DateTime @db.Date
+  externalId    String?  @db.VarChar(128)
+  sourceUrl     String?
   isCorrected   Boolean  @default(false)
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @db.Timestamptz(6)
@@ -181,7 +218,7 @@ model PriceHistory {
   cardVariant CardVariant   @relation(fields: [cardVariantId], references: [id], onDelete: Restrict)
   provider    PriceProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
 
-  @@unique([cardVariantId, providerId, currency, capturedOn])
+  @@unique([cardVariantId, providerId, currency, conditionCode, capturedOn], map: "PriceHistory_variant_provider_ccy_cond_day_key")
   @@index([cardVariantId, currency, capturedOn(sort: Desc)])
   @@index([providerId, capturedOn])
 }
@@ -338,18 +375,143 @@ model PasswordResetToken {
 }
 
 model IngestionRun {
-  id            String          @id @default(uuid()) @db.Uuid
-  providerId    String          @db.Uuid
+  id            String            @id @default(uuid()) @db.Uuid
+  providerId    String            @db.Uuid
+  jobType       IngestionJobType  @default(SETS)
   status        IngestionStatus
-  startedAt     DateTime        @default(now()) @db.Timestamptz(6)
-  finishedAt    DateTime?       @db.Timestamptz(6)
-  cardsSeen     Int             @default(0)
-  pricesWritten Int             @default(0)
+  startedAt     DateTime          @default(now()) @db.Timestamptz(6)
+  finishedAt    DateTime?         @db.Timestamptz(6)
+  setsSeen      Int               @default(0)
+  cardsSeen     Int               @default(0)
+  pricesWritten Int               @default(0)
+  skipped       Int               @default(0)
+  errorsCount   Int               @default(0)
   error         String?
+
+  provider  PriceProvider     @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  errors    IngestionError[]
+  conflicts ImportConflict[]
+
+  @@index([providerId, startedAt(sort: Desc)])
+}
+
+model SetTranslation {
+  id               String   @id @default(uuid()) @db.Uuid
+  setId            String   @db.Uuid
+  language         String   @db.VarChar(16)
+  name             String   @db.VarChar(200)
+  series           String?  @db.VarChar(120)
+  logoUrl          String?
+  symbolUrl        String?
+  sourceExternalId String   @db.VarChar(128)
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+
+  set Set @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@unique([setId, language])
+  @@index([language])
+}
+
+model CardTranslation {
+  id               String   @id @default(uuid()) @db.Uuid
+  cardId           String   @db.Uuid
+  language         String   @db.VarChar(16)
+  name             String   @db.VarChar(200)
+  description      String?  @db.Text
+  localisedData    Json     @db.JsonB
+  imageUrl         String?
+  imageLargeUrl    String?
+  thumbnailUrl     String?
+  sourceExternalId String   @db.VarChar(128)
+  createdAt        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, language])
+  @@index([language])
+}
+
+model CardPrinting {
+  cardId         String   @id @db.Uuid
+  illustrator    String?  @db.VarChar(120)
+  weakness       String?  @db.VarChar(80)
+  resistance     String?  @db.VarChar(80)
+  retreatCost    Int?
+  level          String?  @db.VarChar(16)
+  regulationMark String?  @db.VarChar(8)
+  evolveFrom     String?  @db.VarChar(120)
+  types          String[]
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+}
+
+model ExternalIdentity {
+  id         String             @id @default(uuid()) @db.Uuid
+  providerId String             @db.Uuid
+  entityType ExternalEntityType
+  entityId   String             @db.Uuid
+  externalId String             @db.VarChar(128)
+  createdAt  DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime           @updatedAt @db.Timestamptz(6)
 
   provider PriceProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
 
-  @@index([providerId, startedAt(sort: Desc)])
+  @@unique([providerId, entityType, externalId])
+  @@index([entityType, entityId])
+}
+
+model ImportRecord {
+  id         String             @id @default(uuid()) @db.Uuid
+  providerId String             @db.Uuid
+  type       ImportRecordType
+  externalId String             @db.VarChar(128)
+  payload    Json               @db.JsonB
+  status     ImportRecordStatus
+  error      String?            @db.VarChar(500)
+  importedAt DateTime           @default(now()) @db.Timestamptz(6)
+
+  provider PriceProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@unique([providerId, type, externalId])
+}
+
+model IngestionError {
+  id         String   @id @default(uuid()) @db.Uuid
+  runId      String   @db.Uuid
+  externalId String?  @db.VarChar(128)
+  message    String   @db.VarChar(500)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  run IngestionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+}
+
+model ImportConflict {
+  id         String   @id @default(uuid()) @db.Uuid
+  runId      String   @db.Uuid
+  reason     String   @db.VarChar(80)
+  externalId String?  @db.VarChar(128)
+  details    Json     @db.JsonB
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+
+  run IngestionRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+}
+
+model ConditionMap {
+  id            String @id @default(uuid()) @db.Uuid
+  providerId    String @db.Uuid
+  externalValue String @db.VarChar(80)
+  internalCode  String @db.VarChar(32)
+
+  provider PriceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, externalValue])
 }
 
 model AuditLog {

@@ -152,10 +152,11 @@ export async function seedDemo(prisma: PrismaClient, now = new Date()): Promise<
       for (const point of series) {
         await prisma.priceHistory.upsert({
           where: {
-            cardVariantId_providerId_currency_capturedOn: {
+            cardVariantId_providerId_currency_conditionCode_capturedOn: {
               cardVariantId: cardVariant.id,
               providerId: provider.id,
               currency: DEMO_CURRENCY,
+              conditionCode: 'UNSPECIFIED',
               capturedOn: point.capturedOn,
             },
           },
@@ -181,10 +182,11 @@ export async function seedDemo(prisma: PrismaClient, now = new Date()): Promise<
 
       await prisma.price.upsert({
         where: {
-          cardVariantId_providerId_currency: {
+          cardVariantId_providerId_currency_conditionCode: {
             cardVariantId: cardVariant.id,
             providerId: provider.id,
             currency: DEMO_CURRENCY,
+            conditionCode: 'UNSPECIFIED',
           },
         },
         create: {
