@@ -16,7 +16,7 @@ Le frontend appelle l’API en same-origin. `API_INTERNAL_URL` désigne NestJS d
 
 Le démarrage valide `DATABASE_URL`, `API_PORT` et `WEB_ORIGIN`. Prisma est branché avec l’adaptateur PostgreSQL. `GET /api/v1/health` exécute `SELECT 1` et répond `503` si la base est injoignable.
 
-`auth` ouvre une session opaque. `dashboard` et `admin` appliquent les rôles `USER` et `ADMIN`. Les modules encore absents : `users`, `catalog`, `prices`, `collection`, `watchlist`, `alerts`.
+`auth` ouvre une session opaque. `dashboard` et `admin` appliquent les rôles `USER` et `ADMIN`. `catalog` expose la recherche publique des cartes. Les modules encore absents : `users`, `prices`, `collection`, `watchlist`, `alerts`.
 
 ## Données
 

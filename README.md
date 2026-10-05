@@ -55,7 +55,11 @@ Les mots de passe nouveaux sont hachés en Argon2id. Les comptes de démonstrati
 | `GET`   | `/api/v1/dashboard`     |
 | `GET`   | `/api/v1/admin/summary` |
 
-Pages : `/register`, `/login`, `/dashboard`, `/admin`.
+Pages : `/register`, `/login`, `/dashboard`, `/admin`, `/cards`.
+
+## Catalogue
+
+`GET /api/v1/cards` est public. Il accepte `name`, `set`, `rarity`, `language`, `variant`, `sort`, `direction`, `page` et `pageSize`. La page d’identifiants et le total partent de deux requêtes SQL, puis les cartes de la page sont chargées en une seule lecture. `GET /api/v1/cards/:id` renvoie le détail. `GET /api/v1/cards/filters` alimente les listes de filtres.
 
 ## Données de démonstration
 
